@@ -32,7 +32,7 @@ Run HTMLView from MSX-DOS 2, specifying the HTML file to show on the command lin
 
 Usage:
 
-    htmlview [options] <image.htm>
+    htmlview <image.htm>
 
 To configure Multi Mente to show HTML files, add the following line to MMRET.DAT:
 
