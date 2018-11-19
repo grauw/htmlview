@@ -4,6 +4,8 @@
 HTMLParser: MACRO
 	swallowWhiteSpace:
 		db 1
+	displayNone:
+		db 0
 	nameLength:
 		db 0
 	nameBuffer:
@@ -341,6 +343,8 @@ HTMLParser_EmitAttributeValue:
 
 ; a = character
 HTMLParser_ProcessText: PROC
+	bit 0,(ix + HTMLParser.displayNone)
+	ret nz
 	call HTMLParser_IsWhitespace
 	jr z,WhiteSpace
 	call System_PrintChar
@@ -367,9 +371,11 @@ HTMLParser_ProcessElement: PROC
 	cp "U"
 	jr z,StartU
 	cp "O"
-	jr z,StartO
+	jp z,StartO
 	cp "L"
-	jr z,StartL
+	jp z,StartL
+	cp "S"
+	jp z,StartS
 	ret
 
 StartH:
@@ -387,6 +393,9 @@ StartH:
 	jr z,StartHn
 	cp "6"
 	jr z,StartHn
+	and 11011111B  ; upper-case
+	cp "E"
+	jr z,StartHE
 	ret
 
 StartHn:
@@ -406,6 +415,23 @@ StartH1Loop:
 	ld a," "
 	call System_PrintChar
 	ld (ix + HTMLParser.swallowWhiteSpace),1
+	ret
+
+StartHE:
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "A"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "D"
+	ret nz
+	ld a,(hl)
+	and a
+	ret nz
+	ld (ix + HTMLParser.displayNone),3
 	ret
 
 StartP:
@@ -460,6 +486,38 @@ StartL:
 	ld (ix + HTMLParser.swallowWhiteSpace),1
 	ret
 
+StartS:
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "C"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "R"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "I"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "P"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "T"
+	ret nz
+	ld a,(hl)
+	and a
+	ret nz
+	set 0,(ix + HTMLParser.displayNone)
+	ret
+
 Debug:
 	ld a,"<"
 	call System_PrintChar
@@ -474,11 +532,15 @@ HTMLParser_ProcessCloseElement: PROC
 	ld a,(hl)
 	inc hl
 	and 11011111B  ; upper-case
+	cp "S"
+	jr z,StartS
 	cp "H"
 	ret nz
 	ld a,(hl)
 	inc hl
 	and 11011111B  ; upper-case
+	cp "E"
+	jr z,StartHE
 	cp "T"
 	ret nz
 	ld a,(hl)
@@ -496,6 +558,57 @@ HTMLParser_ProcessCloseElement: PROC
 	ret nz
 	call System_PrintCrLf
 	call System_Unwind
+	ret
+
+StartHE:
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "A"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "D"
+	ret nz
+	ld a,(hl)
+	and a
+	ret nz
+	ld (ix + HTMLParser.displayNone),0
+	ret
+
+StartS:
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "C"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "R"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "I"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "P"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "T"
+	ret nz
+	ld a,(hl)
+	and a
+	ret nz
+	bit 1,(ix + HTMLParser.displayNone)
+	ret nz
+	res 0,(ix + HTMLParser.displayNone)
 	ret
 
 Debug:
