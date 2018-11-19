@@ -1,7 +1,7 @@
 HTMLView for MSX
 ===============
 
-Copyright 2017 Laurens Holst
+Copyright 2018 Laurens Holst
 
 Project information
 -------------------
