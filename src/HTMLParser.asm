@@ -2,6 +2,8 @@
 ;
 ;
 HTMLParser: MACRO
+	swallowWhiteSpace:
+		db 0
 	nameLength:
 		db 0
 	nameBuffer:
@@ -341,10 +343,13 @@ HTMLParser_EmitAttributeValue:
 HTMLParser_ProcessText: PROC
 	call HTMLParser_IsWhitespace
 	jr z,WhiteSpace
-	cp 32
-	call nc,System_PrintChar
+	call System_PrintChar
+	ld (ix + HTMLParser.swallowWhiteSpace),0
 	ret
 WhiteSpace:
+	bit 0,(ix + HTMLParser.swallowWhiteSpace)
+	ret nz
+	ld (ix + HTMLParser.swallowWhiteSpace),1
 	ld a," "
 	call System_PrintChar
 	ret
