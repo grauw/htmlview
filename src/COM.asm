@@ -49,6 +49,7 @@ RAM: equ RAM_PAGE1
 	INCLUDE "CLI.asm"
 	INCLUDE "MemoryTest.asm"
 	INCLUDE "HeapTest.asm"
+	INCLUDE "HTMLParser.asm"
 
 	ENDS
 

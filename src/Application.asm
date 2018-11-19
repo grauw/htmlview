@@ -1,11 +1,15 @@
 ;
 ; Top-level application program class
 ;
+Application_READBUFFER_SIZE: equ 1000H
+
 Application: MACRO
 	cli:
 		CLI
 	reader:
 		FileReader
+	htmlParser:
+		HTMLParser
 	size:
 	ENDM
 
@@ -82,8 +86,31 @@ Application_GetReader:
 	ret
 
 ; ix = this
+; ix <- HTML parser
+Application_GetHTMLParser:
+	ld de,Application.htmlParser
+	add ix,de
+	ret
+
+; ix = this
 Application_EnterMainLoop:
 	call Application_CheckUsageInstructions
+	push ix
+	push ix
+	push ix
+	call Application_GetCLI
+	call CLI_GetFileInfoBlock
+	ex (sp),ix
+	call Application_GetReader
+	pop de
+	ld hl,Application_fileReadBuffer
+	ld bc,Application_READBUFFER_SIZE
+	call FileReader_Construct
+	ex (sp),ix
+	pop iy
+	call Application_GetHTMLParser
+	call HTMLParser_Parse
+	pop ix
 	ret
 
 ; ix = this
@@ -108,6 +135,10 @@ Application_CheckStack:
 	SECTION RAM
 
 Application_instance: Application
+
+	ALIGN 100H
+Application_fileReadBuffer:
+	ds Application_READBUFFER_SIZE
 
 	ENDS
 
