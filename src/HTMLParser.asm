@@ -3,7 +3,7 @@
 ;
 HTMLParser: MACRO
 	swallowWhiteSpace:
-		db 0
+		db 1
 	nameLength:
 		db 0
 	nameBuffer:
@@ -356,16 +356,149 @@ WhiteSpace:
 	ENDP
 
 ; hl = element name
-HTMLParser_ProcessElement:
+HTMLParser_ProcessElement: PROC
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "P"
+	jr z,StartP
+	cp "H"
+	jr z,StartH
+	cp "U"
+	jr z,StartU
+	cp "O"
+	jr z,StartO
+	cp "L"
+	jr z,StartL
+	ret
+
+StartH:
+	ld a,(hl)
+	inc hl
+	cp "1"
+	jr z,StartHn
+	cp "2"
+	jr z,StartHn
+	cp "3"
+	jr z,StartHn
+	cp "4"
+	jr z,StartHn
+	cp "5"
+	jr z,StartHn
+	cp "6"
+	jr z,StartHn
+	ret
+
+StartHn:
+	ld b,a
+	ld a,(hl)
+	and a
+	ret nz
+	ld a,b
+	sub "0"
+	ld b,a
+	call System_PrintCrLf
+	call System_PrintCrLf
+StartH1Loop:
+	ld a,"#"
+	call System_PrintChar
+	djnz StartH1Loop
+	ld a," "
+	call System_PrintChar
+	ld (ix + HTMLParser.swallowWhiteSpace),1
+	ret
+
+StartP:
+	ld a,(hl)
+	and a
+	ret nz
+	call System_PrintCrLf
+	call System_PrintCrLf
+	ld (ix + HTMLParser.swallowWhiteSpace),1
+	ret
+
+StartU:
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "L"
+	ret nz
+	ld a,(hl)
+	and a
+	ret nz
+	call System_PrintCrLf
+	ld (ix + HTMLParser.swallowWhiteSpace),1
+	ret
+
+StartO:
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "L"
+	ret nz
+	ld a,(hl)
+	and a
+	ret nz
+	call System_PrintCrLf
+	ld (ix + HTMLParser.swallowWhiteSpace),1
+	ret
+
+StartL:
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "I"
+	ret nz
+	ld a,(hl)
+	and a
+	ret nz
+	call System_PrintCrLf
+	ld a,"o"
+	call System_PrintChar
+	ld a," "
+	call System_PrintChar
+	ld (ix + HTMLParser.swallowWhiteSpace),1
+	ret
+
+Debug:
 	ld a,"<"
 	call System_PrintChar
 	call System_Print
 	ld a,">"
 	call System_PrintChar
 	ret
+	ENDP
 
 ; hl = element name (or empty string if self-closing)
-HTMLParser_ProcessCloseElement:
+HTMLParser_ProcessCloseElement: PROC
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "H"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "T"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "M"
+	ret nz
+	ld a,(hl)
+	inc hl
+	and 11011111B  ; upper-case
+	cp "L"
+	ret nz
+	ld a,(hl)
+	and a
+	ret nz
+	call System_PrintCrLf
+	call System_Unwind
+	ret
+
+Debug:
 	ld a,"<"
 	call System_PrintChar
 	ld a,"/"
@@ -374,9 +507,11 @@ HTMLParser_ProcessCloseElement:
 	ld a,">"
 	call System_PrintChar
 	ret
+	ENDP
 
 ; hl = attribute name
 HTMLParser_ProcessAttributeName:
+	ret
 	ld a,"["
 	call System_PrintChar
 	call System_Print
@@ -386,6 +521,7 @@ HTMLParser_ProcessAttributeName:
 
 ; hl = attribute value
 HTMLParser_ProcessAttributeValue:
+	ret
 	ld a,"\""
 	call System_PrintChar
 	call System_Print
