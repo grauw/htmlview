@@ -276,7 +276,7 @@ Loop:
 	jr nz,Loop
 	call Reader_Read_IY
 	cp ">"
-	call nz,System_ThrowException
+	jr nz,Loop
 	jp HTMLParser_ParseText
 	ENDP
 
