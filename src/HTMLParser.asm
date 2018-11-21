@@ -1,19 +1,23 @@
 ;
 ;
 ;
+HTMLParser_NAMEBUFFER_SIZE: equ 1000H
+
 HTMLParser: MACRO
+	nameWriter:
+		Writer
 	swallowWhiteSpace:
 		db 1
 	displayNone:
 		db 0
-	nameLength:
-		db 0
-	nameBuffer:
-		ds 256
 	ENDM
 
 ; ix = this
 HTMLParser_Construct:
+	ld hl,HTMLParser_nameBuffer
+	ld bc,HTMLParser_NAMEBUFFER_SIZE
+	ld de,System_ThrowException
+	call Writer_Construct
 	ret
 
 ; ix = this
@@ -21,37 +25,19 @@ HTMLParser_Destruct:
 	ret
 
 HTMLParser_FinishName:
-	ld e,(ix + HTMLParser.nameLength)
-	ld d,0
-	push ix
-	add ix,de
-	ld (ix + HTMLParser.nameBuffer),0
-	pop ix
-	ret
+	ld a,0
+	jp Writer_Write
 
 HTMLParser_ClearName:
-	ld (ix + HTMLParser.nameLength),0
+	ld a,(ix + HTMLParser.nameWriter + Writer.bufferStart)
+	ld (ix + HTMLParser.nameWriter + Writer.bufferPosition),a
+	ld a,(ix + HTMLParser.nameWriter + Writer.bufferStart + 1)
+	ld (ix + HTMLParser.nameWriter + Writer.bufferPosition + 1),a
 	ret
 
 HTMLParser_GetNameBuffer:
-	ld e,ixl
-	ld d,ixh
-	ld hl,HTMLParser.nameBuffer
-	add hl,de
-	ret
-
-; a = character
-HTMLParser_AddNameCharacter:
-	ld e,(ix + HTMLParser.nameLength)
-	ld d,0
-	inc e
-	call z,System_ThrowException
-	ld (ix + HTMLParser.nameLength),e
-	dec e
-	push ix
-	add ix,de
-	ld (ix + HTMLParser.nameBuffer),a
-	pop ix
+	ld l,(ix + HTMLParser.nameWriter + Writer.bufferStart)
+	ld h,(ix + HTMLParser.nameWriter + Writer.bufferStart + 1)
 	ret
 
 ; a = character
@@ -73,15 +59,26 @@ HTMLParser_IsWhitespace:
 ; ix = this
 ; iy = reader
 HTMLParser_Parse:
-	call HTMLParser_ParseText
-	ret
+	in a,(2eh)
+	jr HTMLParser_ParseTextStart
+
+HTMLParser_ParseTextStart:
+	call Reader_Read_IY
+	cp "<"
+	jr z,HTMLParser_ParseElementStart
+	call Writer_Write
+	jr HTMLParser_ParseText
 
 HTMLParser_ParseText:
 	call Reader_Read_IY
 	cp "<"
-	jr z,HTMLParser_ParseElementStart
-	call HTMLParser_EmitText
+	jr z,HTMLParser_ParseTextEnd
+	call Writer_Write
 	jr HTMLParser_ParseText
+
+HTMLParser_ParseTextEnd:
+	call HTMLParser_EmitText
+	jr HTMLParser_ParseElementStart
 
 HTMLParser_ParseElementStart:
 	call Reader_Read_IY
@@ -93,7 +90,7 @@ HTMLParser_ParseElementStart:
 	jr z,HTMLParser_ParseCloseElementStart
 	cp "!"
 	jp z,HTMLParser_ParseCommentStart
-	call HTMLParser_AddNameCharacter
+	call Writer_Write
 	jr HTMLParser_ParseElementName
 
 HTMLParser_ParseElementName:
@@ -104,7 +101,7 @@ HTMLParser_ParseElementName:
 	jr z,HTMLParser_ParseElementNameEnd
 	cp "/"
 	jr z,HTMLParser_ParseElementNameEmptyClose
-	call HTMLParser_AddNameCharacter
+	call Writer_Write
 	jr HTMLParser_ParseElementName
 
 HTMLParser_ParseElementNameSpace:
@@ -134,7 +131,7 @@ HTMLParser_ParseCloseElementStart:
 	call z,System_ThrowException
 	cp "/"
 	call z,System_ThrowException
-	call HTMLParser_AddNameCharacter
+	call Writer_Write
 	jr HTMLParser_ParseCloseElementName
 
 HTMLParser_ParseCloseElementName:
@@ -145,7 +142,7 @@ HTMLParser_ParseCloseElementName:
 	jr z,HTMLParser_ParseCloseElementEnd
 	cp "/"
 	call z,System_ThrowException
-	call HTMLParser_AddNameCharacter
+	call Writer_Write
 	jr HTMLParser_ParseCloseElementName
 
 HTMLParser_ParseCloseElementEnd:
@@ -153,7 +150,7 @@ HTMLParser_ParseCloseElementEnd:
 	jr HTMLParser_ParseElementEnd
 
 HTMLParser_ParseElementEnd:
-	jp HTMLParser_ParseText
+	jp HTMLParser_ParseTextStart
 
 HTMLParser_ParseAttributeNameStart:
 	call Reader_Read_IY
@@ -165,7 +162,7 @@ HTMLParser_ParseAttributeNameStart:
 	jr z,HTMLParser_ParseElementEnd
 	cp "/"
 	jr z,HTMLParser_ParseElementEmptyClose
-	call HTMLParser_AddNameCharacter
+	call Writer_Write
 	jr HTMLParser_ParseAttributeName
 
 HTMLParser_ParseAttributeName:
@@ -176,7 +173,7 @@ HTMLParser_ParseAttributeName:
 	jr z,HTMLParser_ParseAttributeNameElementEnd
 	cp "/"
 	jr z,HTMLParser_ParseAttributeNameElementEmptyClose
-	call HTMLParser_AddNameCharacter
+	call Writer_Write
 	jr HTMLParser_ParseAttributeName
 
 HTMLParser_ParseAttributeNameElementEnd:
@@ -196,28 +193,28 @@ HTMLParser_ParseAttributeValueStart:
 	jp z,HTMLParser_ParseAttributeValueApostrophe
 	call HTMLParser_IsWhitespace
 	call z,System_ThrowException
-	call HTMLParser_AddNameCharacter
+	call Writer_Write
 	jp HTMLParser_ParseAttributeValueSpace
 
 HTMLParser_ParseAttributeValueQuote:
 	call Reader_Read_IY
 	cp "\""
 	jr z,HTMLParser_ParseAttributeValueEnd
-	call HTMLParser_AddNameCharacter
+	call Writer_Write
 	jr HTMLParser_ParseAttributeValueQuote
 
 HTMLParser_ParseAttributeValueApostrophe:
 	call Reader_Read_IY
 	cp "\'"
 	jr z,HTMLParser_ParseAttributeValueEnd
-	call HTMLParser_AddNameCharacter
+	call Writer_Write
 	jr HTMLParser_ParseAttributeValueApostrophe
 
 HTMLParser_ParseAttributeValueSpace:
 	call Reader_Read_IY
 	call HTMLParser_IsWhitespace
 	jr z,HTMLParser_ParseAttributeValueEnd
-	call HTMLParser_AddNameCharacter
+	call Writer_Write
 	jr HTMLParser_ParseAttributeValueSpace
 
 HTMLParser_ParseAttributeValueEnd:
@@ -245,7 +242,7 @@ Loop:
 	call Reader_Read_IY
 	cp ">"
 	call nz,System_ThrowException
-	jp HTMLParser_ParseText
+	jp HTMLParser_ParseTextStart
 	ENDP
 
 HTMLParser_ParseCDATAStart: PROC
@@ -277,7 +274,7 @@ Loop:
 	call Reader_Read_IY
 	cp ">"
 	jr nz,Loop
-	jp HTMLParser_ParseText
+	jp HTMLParser_ParseTextStart
 	ENDP
 
 HTMLParser_ParseDOCTYPEStart: PROC
@@ -309,13 +306,14 @@ Loop:
 	call Reader_Read_IY
 	cp ">"
 	jr nz,Loop
-	jp HTMLParser_ParseText
+	jp HTMLParser_ParseTextStart
 	ENDP
 
-; a = character
 HTMLParser_EmitText:
+	call HTMLParser_FinishName
+	call HTMLParser_GetNameBuffer
 	call HTMLParser_ProcessText
-	ret
+	jp HTMLParser_ClearName
 
 HTMLParser_EmitElement:
 	call HTMLParser_FinishName
@@ -341,22 +339,27 @@ HTMLParser_EmitAttributeValue:
 	call HTMLParser_ProcessAttributeValue
 	jp HTMLParser_ClearName
 
-; a = character
+; hl = text
 HTMLParser_ProcessText: PROC
 	bit 0,(ix + HTMLParser.displayNone)
 	ret nz
+Loop:
+	ld a,(hl)
+	and a
+	ret z
+	inc hl
 	call HTMLParser_IsWhitespace
 	jr z,WhiteSpace
 	call System_PrintChar
 	ld (ix + HTMLParser.swallowWhiteSpace),0
-	ret
+	jr Loop
 WhiteSpace:
 	bit 0,(ix + HTMLParser.swallowWhiteSpace)
-	ret nz
+	jr nz,Loop
 	ld (ix + HTMLParser.swallowWhiteSpace),1
 	ld a," "
 	call System_PrintChar
-	ret
+	jr Loop
 	ENDP
 
 ; hl = element name
@@ -641,3 +644,11 @@ HTMLParser_ProcessAttributeValue:
 	ld a,"\""
 	call System_PrintChar
 	ret
+
+	SECTION RAM
+
+	ALIGN 100H
+HTMLParser_nameBuffer:
+	ds HTMLParser_NAMEBUFFER_SIZE
+
+	ENDS

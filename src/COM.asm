@@ -38,6 +38,7 @@ RAM: equ RAM_PAGE1
 	INCLUDE "DOS2Runtime.asm"
 	INCLUDE "Application.asm"
 	INCLUDE "Reader.asm"
+	INCLUDE "Writer.asm"
 	INCLUDE "FileReader.asm"
 
 	ENDS

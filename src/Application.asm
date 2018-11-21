@@ -109,6 +109,7 @@ Application_EnterMainLoop:
 	ex (sp),ix
 	pop iy
 	call Application_GetHTMLParser
+	call HTMLParser_Construct
 	call HTMLParser_Parse
 	pop ix
 	ret
