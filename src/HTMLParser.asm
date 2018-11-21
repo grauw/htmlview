@@ -59,7 +59,6 @@ HTMLParser_IsWhitespace:
 ; ix = this
 ; iy = reader
 HTMLParser_Parse:
-	in a,(2eh)
 	jr HTMLParser_ParseTextStart
 
 HTMLParser_ParseTextStart:
