@@ -5,9 +5,8 @@ all:
 	java -jar tools/glass.jar -I gen -I lib/neonlib/src src/COM.asm bin/htmlview.com bin/htmlview.sym
 
 dist: all
-	cp README.md LICENSE bin/
 	rm -f bin/htmlview.zip
-	cd bin && zip htmlview.zip htmlview.com README.md LICENSE
+	zip -j bin/htmlview.zip bin/htmlview.com README.md LICENSE
 
 copy: all
 	cp bin/htmlview.com $(COPY_TARGET)/
