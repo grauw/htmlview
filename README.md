@@ -9,7 +9,7 @@ Project information
 Shows HTML files on MSX.
 
   * Author: Laurens Holst <laurens@grauw.nl>
-  * Source: <https://hg.sr.ht/~grauw/htmlview/>
+  * Source: <https://github.com/grauw/htmlview>
   * Thread: <https://www.msx.org/forum/msx-talk/development/when-well-see-elinks-for-msx?page=5#comment-348593>
   * License: Simplified BSD License
 
